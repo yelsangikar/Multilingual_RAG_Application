@@ -5,15 +5,14 @@ from langchain_core.documents import Document
 from doc_loader import extract_images_from_pdf, extract_text_from_image_with_gpt
 from langchain_community.document_loaders import PyMuPDFLoader
 
+from chunk_and_embed import chunk_documents, load_or_create_index, embed_and_add_new_docs  # 🧠 ← Your helper file
+
 import os
 from tempfile import NamedTemporaryFile
 
 from langchain.chains import RetrievalQA
-from langchain_openai import ChatOpenAI
-from langchain_community.vectorstores import FAISS
-from langchain_openai import OpenAIEmbeddings
 
-from pydantic import BaseModel
+INDEX_PATH = "faiss_index"
 
 app = FastAPI()
 
@@ -30,7 +29,6 @@ async def upload_document(file: UploadFile = File(...)):
     ext = filename.split(".")[-1]
     contents = await file.read()
 
-    # Save to a temporary file
     with NamedTemporaryFile(delete=False, suffix=f".{ext}") as tmp:
         tmp.write(contents)
         tmp_path = tmp.name
@@ -40,6 +38,10 @@ async def upload_document(file: UploadFile = File(...)):
         if ext == "pdf":
             loader = PyMuPDFLoader(tmp_path)
             docs.extend(loader.load())
+            for img_path, img_name in extract_images_from_pdf(tmp_path):
+                extracted = extract_text_from_image_with_gpt(img_path)
+                docs.append(Document(page_content=extracted, metadata={"source": img_name}))
+                os.remove(img_path)
 
         elif ext in ["png", "jpg", "jpeg"]:
             extracted = extract_text_from_image_with_gpt(tmp_path)
@@ -52,12 +54,22 @@ async def upload_document(file: UploadFile = File(...)):
         else:
             return JSONResponse(content={"error": "Unsupported file type"}, status_code=400)
 
+        if not docs:
+            return JSONResponse(content={"error": "No content extracted"}, status_code=400)
+
+        # ✅ Chunk + Embed + Index
+        chunks = chunk_documents(docs)
+        vectorstore, embeddings = load_or_create_index(chunks)
+        embed_and_add_new_docs(vectorstore, chunks, embeddings)
+
     finally:
         os.remove(tmp_path)
 
     return {"message": "Upload successful", "preview": docs[0].page_content[:500]}
 
-INDEX_PATH = "faiss_index"
+from pydantic import BaseModel
+from langchain_openai import OpenAIEmbeddings, ChatOpenAI
+from langchain_community.vectorstores import FAISS
 
 class ChatRequest(BaseModel):
     question: str
@@ -68,19 +80,20 @@ class ChatResponse(BaseModel):
 @app.post("/chat", response_model=ChatResponse)
 def chat_with_faiss(request: ChatRequest):
     if not os.path.exists(INDEX_PATH):
-        raise HTTPException(status_code=400, detail="No FAISS index found. Please upload and process documents first.")
+        raise HTTPException(status_code=400, detail="❌ FAISS index not found. Upload a document first.")
 
-    # Load index and setup QA chain
+    # Load vector store
     embeddings = OpenAIEmbeddings()
     vectorstore = FAISS.load_local(INDEX_PATH, embeddings, allow_dangerous_deserialization=True)
+
+    # Create retriever and QA chain
     retriever = vectorstore.as_retriever()
     llm = ChatOpenAI(model="gpt-4o")
     qa = RetrievalQA.from_chain_type(llm=llm, retriever=retriever)
 
-    # Run query
     try:
         answer = qa.run(request.question)
         return ChatResponse(answer=answer)
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error generating response: {e}")
+        raise HTTPException(status_code=500, detail=f"💥 Error: {e}")
 
