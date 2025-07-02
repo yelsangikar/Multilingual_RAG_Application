@@ -36,3 +36,65 @@ pytesseract(Optical Character Recognition):
             chi_sim for Simplified Chinese
 
             done by these: UnstructuredPDFLoader, UnstructuredImageLoader
+
+unstructured_inference
+
+            🧠 Purpose: ML-based inference engine used by the unstructured library
+            This is a backend used by the unstructured library for document layout parsing, text classification, and partitioning.
+
+            It contains ML models for identifying things like:
+
+            Headings
+
+            Titles
+
+            Lists
+
+            Tables
+
+            Section breaks
+
+            Often used when calling unstructured.partition.auto or partition_pdf() etc.
+
+🧠 1. YOLOX
+
+            YOLOX is an advanced object detection model from Megvii.
+
+            It is an improvement over earlier YOLO versions (like YOLOv4 and YOLOv5), using anchor-free architecture and decoupled heads.
+
+            L usually stands for "Large" variant (YOLOX comes in sizes: nano, tiny, s, m, l, x).
+
+
+🧩 Breakdown of Time
+1. Text Extraction via PyMuPDFLoader (✅ Fast)
+Extracts all page texts in one go
+
+        Time: 1–5 seconds even for 200 pages
+
+        Depends on:
+
+        PDF size (MB)
+
+        Text vs image content
+
+        Your CPU/RAM
+
+        ➡️ Fast and efficient — no real concern here.
+
+2. Image Extraction + GPT-4 Vision Calls (🐢 Slowest Part)
+
+        If each page has even 1 image:
+
+        Extracting the image: ~0.1s per image (fair)
+
+        Sending it to gpt-4o vision: 3–10 seconds per image, depending on:
+
+        Image size (larger = slower)
+
+        API latency
+
+        Internet speed
+
+        Your OpenAI rate limits
+
+        📉 This is the bottleneck

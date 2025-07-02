@@ -6,3 +6,6 @@ pdf2image
 pytesseract
 pillow
 faiss-cpu
+pdfminer
+pi_heif
+unstructured_inference
