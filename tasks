@@ -1,0 +1,20 @@
+Multilingual docs (Japanese, Chinese, English):
+         Done
+         Unstructured + pytesseract supports multilingual OCR. Final multilingual accuracy depends on correct Tesseract language packs.
+
+Accept and process documents in Japanese, English, and Chinese:
+        Done
+        via UnstructuredPDFLoader and UnstructuredImageLoader
+
+Support a variety of formats such as:
+        Done
+        Tesseract supports both orientations, but accuracy can be improved using --psm configs
+
+Horizontally and vertically oriented documents.
+Scanned or image-based documents (e.g., PDFs, PNGs, JPEGs):
+        Done
+        OCR pipeline extracts text from scanned PDFs and images using pytesseract
+
+
+	▪	Side-embedded images within documents.
+	◦	Extract and interpret both textual and visual information from these documents.

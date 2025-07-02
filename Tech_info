@@ -1,0 +1,38 @@
+unstructured:
+
+            If it's a text-based PDF:
+            It extracts raw text directly from the document
+
+            It uses pdfminer.six under the hood
+
+            Detects paragraphs, titles, tables, etc.
+
+            If it's an image-based PDF or PNG/JPEG:
+            It can't read text directly — it's just pixels
+
+            So unstructured uses:
+
+            pdf2image: to convert PDF pages to images
+
+            pytesseract: to run OCR on each image and extract text
+
+
+pytesseract(Optical Character Recognition):
+
+            Tesseract is a trained model that:
+
+            Detects characters in images
+
+            Matches them to known patterns for each language
+
+            Supports 100+ languages (if language packs are installed)
+
+            For example:
+
+            eng for English
+
+            jpn for Japanese
+
+            chi_sim for Simplified Chinese
+
+            done by these: UnstructuredPDFLoader, UnstructuredImageLoader

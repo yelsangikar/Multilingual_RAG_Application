@@ -1,4 +1,4 @@
-from langchain.document_loaders import UnstructuredPDFLoader, UnstructuredImageLoader
+from langchain_community.document_loaders import UnstructuredPDFLoader, UnstructuredImageLoader
 from langchain.schema import Document
 from typing import List
 import os
@@ -25,7 +25,7 @@ def load_documents_from_folder(folder_path: str) -> List[Document]:
 
 # 🧪 TEST
 if __name__ == "__main__":
-    folder = "docs"  # 📁 Place your Japanese, Chinese, English PDFs/images here
+    folder = "../docs"  # 📁 Place your Japanese, Chinese, English PDFs/images here
     loaded_docs = load_documents_from_folder(folder)
 
     for i, doc in enumerate(loaded_docs[:5]):
