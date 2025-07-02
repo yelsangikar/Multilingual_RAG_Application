@@ -6,6 +6,8 @@ import pickle
 from PIL import Image
 from io import BytesIO
 import fitz  # PyMuPDF
+from typing import List
+from tempfile import NamedTemporaryFile
 
 from langchain_community.document_loaders import PyMuPDFLoader
 from langchain_openai import ChatOpenAI
@@ -17,8 +19,8 @@ load_dotenv()
 
 llm = ChatOpenAI(model="gpt-4o", max_tokens=1000)
 
-CACHE_FILE = "processed_docs.pkl"  # ✅ Cache filename
-
+CACHE_FILE = "processed_docs.pkl"
+#
 def extract_text_from_image_with_gpt(image_path):
     with open(image_path, "rb") as img_file:
         b64 = base64.b64encode(img_file.read()).decode()
@@ -82,6 +84,47 @@ def load_documents(folder_path):
 
     print("✅ Documents processed and cached.")
     return docs
+
+def load_document_from_upload(filename: str, file_bytes: bytes) -> List[Document]:
+    ext = filename.lower().split('.')[-1]
+    docs = []
+
+    # Save temp file
+    with NamedTemporaryFile(delete=False, suffix=f".{ext}") as tmp:
+        tmp.write(file_bytes)
+        tmp_path = tmp.name
+
+    try:
+        if ext == "pdf":
+            print(f"📄 Processing uploaded PDF: {filename}")
+            loader = PyMuPDFLoader(tmp_path)
+            docs.extend(loader.load())
+
+            print("🖼️ Extracting images from PDF...")
+            images = extract_images_from_pdf(tmp_path)
+            for img_path, img_name in images:
+                extracted = extract_text_from_image_with_gpt(img_path)
+                docs.append(Document(page_content=extracted, metadata={"source": img_name}))
+                os.remove(img_path)
+
+        elif ext in ["png", "jpg", "jpeg"]:
+            print(f"🖼️ Processing uploaded image: {filename}")
+            extracted = extract_text_from_image_with_gpt(tmp_path)
+            docs.append(Document(page_content=extracted, metadata={"source": filename}))
+
+        elif ext == "txt":
+            print(f"📄 Processing uploaded text file: {filename}")
+            content = file_bytes.decode("utf-8")
+            docs.append(Document(page_content=content, metadata={"source": filename}))
+
+        else:
+            print(f"⚠️ Unsupported file type: {ext}")
+
+    finally:
+        os.remove(tmp_path)
+
+    return docs
+
 
 
 
